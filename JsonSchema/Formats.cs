@@ -16,6 +16,9 @@ public static class Formats
 	private static readonly ConcurrentDictionary<string, Format> _registry;
 	private static readonly string[] _dateTimeFormats =
 	{
+		"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'ffffffffffK",
+		"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffffK",
+		"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'ffffffffK",
 		"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffffK",
 		"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'ffffffK",
 		"yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffffK",
@@ -28,6 +31,9 @@ public static class Formats
 	};
 	private static readonly string[] _timeFormats =
 	{
+		"HH':'mm':'ss'.'ffffffffffK",
+		"HH':'mm':'ss'.'fffffffffK",
+		"HH':'mm':'ss'.'ffffffffK",
 		"HH':'mm':'ss'.'fffffffK",
 		"HH':'mm':'ss'.'ffffffK",
 		"HH':'mm':'ss'.'fffffK",
@@ -273,7 +279,18 @@ public static class Formats
 	{
 		if (node.GetSchemaValueType() != SchemaValueType.String) return true;
 
-		return System.DateTime.TryParseExact(node!.GetValue<string>().ToUpperInvariant(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+		var dateString = node!.GetValue<string>().ToUpperInvariant();
+		var canParseExact=System.DateTime.TryParseExact(dateString, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+		if (!canParseExact) {
+			//from https://www.myintervals.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
+			var rgx = @"^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$";
+			var regex = new Regex(rgx);
+			var match=regex.Match(dateString);
+			return match.Success;
+			//return System.DateTime.TryParse(dateString, out _);
+		}
+		return canParseExact;
+
 	}
 
 	private static bool CheckHostName(JsonNode? node)
